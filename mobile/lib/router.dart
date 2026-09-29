@@ -59,7 +59,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       switch (s.phase) {
         case SessionPhase.loading:
-          return loc == '/splash' ? null : '/splash';
+          if (loc == '/splash') return null;
+          return Uri(path: '/splash', queryParameters: {'from': state.uri.toString()}).toString();
         case SessionPhase.loggedOut:
           return _authPaths.contains(loc) ? null : '/login';
         case SessionPhase.ready:
@@ -68,7 +69,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           if (s.isNewUser && (s.me?.memberships.isEmpty ?? true)) {
             return loc == '/welcome' || loc == '/create-company' ? null : '/welcome';
           }
-          if (loc == '/splash' || _authPaths.contains(loc) || loc == '/name' || loc == '/welcome') return home;
+          if (loc == '/splash') {
+            final from = state.uri.queryParameters['from'];
+            final allowed = from != null && (from.startsWith(s.inCompanyMode ? '/company' : '/worker') || from.startsWith('/notifications'));
+            return allowed ? from : home;
+          }
+          if (_authPaths.contains(loc) || loc == '/name' || loc == '/welcome') return home;
           if (loc.startsWith('/company') && !s.inCompanyMode) return '/worker/today';
           if (loc.startsWith('/worker') && s.inCompanyMode) return '/company/dashboard';
           return null;

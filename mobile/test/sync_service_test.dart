@@ -159,6 +159,16 @@ void main() {
     expect(adapter.requests, isEmpty);
   });
 
+  test('"send now" (force) ignores the backoff wait once the internet is back', () async {
+    adapter.offline = true;
+    await sync.record(type: 'WORK_STARTED', siteId: 'site-1');
+    adapter.offline = false;
+    await sync.syncNow(); // still within backoff → nothing
+    expect((await db.select(db.pendingEvents).get()).single.status, 'PENDING');
+    await sync.syncNow(force: true);
+    expect((await db.select(db.pendingEvents).get()).single.status, 'SYNCED');
+  });
+
   test('backoff grows and is capped at 5 minutes', () {
     expect(SyncService.backoff(1), const Duration(seconds: 5));
     expect(SyncService.backoff(2), const Duration(seconds: 10));

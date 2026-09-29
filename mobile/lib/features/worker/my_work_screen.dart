@@ -66,16 +66,14 @@ class _History extends ConsumerWidget {
                 );
               }
               final s = p.items[i - 1];
-              return Card(
-                child: ListTile(
-                  title: Text('${fmtYmd(s.businessDate)} · ${fmtTime(s.startedAt)}–${s.endedAt == null ? '…' : fmtTime(s.endedAt)}'),
-                  subtitle: Text([s.siteName, s.companyName].whereType<String>().join(' · ')),
-                  trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
-                    if (s.status == 'VERIFIED') Text(fmtMinutes(s.verifiedMinutes), style: const TextStyle(fontSize: 12, color: AppColors.verified)),
-                  ]),
-                  onTap: () => context.push('/shift/${s.id}'),
-                ),
+              return RecordTile(
+                title: '${fmtYmd(s.businessDate)} · ${fmtTime(s.startedAt)}–${s.endedAt == null ? '…' : fmtTime(s.endedAt)}',
+                lines: [[s.siteName, s.companyName].whereType<String>().join(' · ')],
+                badges: [
+                  Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
+                  if (s.status == 'VERIFIED') Pill(fmtMinutes(s.verifiedMinutes), color: AppColors.verified, icon: Icons.verified_outlined),
+                ],
+                onTap: () => context.push('/shift/${s.id}'),
               );
             },
           ),
@@ -103,16 +101,14 @@ class _Tasks extends ConsumerWidget {
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (c, i) {
             final t = p.items[i];
-            return Card(
-              child: ListTile(
-                title: Text(t.title),
-                subtitle: Text([qty(t.quantity, t.unit), t.siteName].where((x) => x != null && x.isNotEmpty).join(' · ')),
-                trailing: Pill(taskStatusLabel(t.status), color: taskStatusColor(t.status)),
-                onTap: () async {
-                  await context.push('/task/${t.id}');
-                  ref.invalidate(myTasksProvider);
-                },
-              ),
+            return RecordTile(
+              title: t.title,
+              lines: [[qty(t.quantity, t.unit), t.siteName].where((x) => x != null && x.isNotEmpty).join(' · ')],
+              badges: [Pill(taskStatusLabel(t.status), color: taskStatusColor(t.status))],
+              onTap: () async {
+                await context.push('/task/${t.id}');
+                ref.invalidate(myTasksProvider);
+              },
             );
           },
         ),

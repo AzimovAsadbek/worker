@@ -194,7 +194,7 @@ async function main() {
         clientEventId: `seed-${shift.id}-s`,
         latitude: site.latitude + jitter(),
         longitude: site.longitude + jitter(),
-        accuracyMeters: 8 + Math.round(rnd() * 25),
+        accuracyMeters: opts.flags?.includes('LOW_ACCURACY') ? 120 + Math.round(rnd() * 60) : 8 + Math.round(rnd() * 25),
         insideGeofence: true,
         distanceMeters: Math.round(rnd() * 80),
         deviceId: `seed-device-${worker.id.slice(0, 8)}`,
@@ -230,6 +230,10 @@ async function main() {
     return shift;
   };
 
+  // Most recent working day at least 2 days ago → demo "missed checkout" (resident worker) case.
+  let missedCheckoutDaysBack = 2;
+  while (isoDow(addDays(today, -missedCheckoutDaysBack)) === 7) missedCheckoutDaysBack++;
+
   for (const [site, crew, foreman, endHour] of [
     [site1, site1Workers, foreman1, 18],
     [site2, site2Workers, foreman2, 17],
@@ -240,7 +244,7 @@ async function main() {
       for (let wi = 0; wi < crew.length; wi++) {
         const worker = crew[wi];
         const resident = site.id === site1.id && wi < 3;
-        if (rnd() < 0.08) continue; // absent
+        if (rnd() < 0.08 && !(back === missedCheckoutDaysBack && wi === 1 && resident)) continue; // absent
         const startMin = -15 + Math.floor(rnd() * 45) + (rnd() < 0.1 ? 30 : 0);
         const start = local(day, 8, 0 + startMin);
         const end = local(day, endHour, Math.floor(rnd() * 30) - 10);
@@ -249,7 +253,7 @@ async function main() {
           if (start.getTime() < Date.now()) await addShift(site, worker, foreman, day, { start, end: null, status: ShiftStatus.OPEN, resident });
           continue;
         }
-        if (back === 3 && wi === 1 && resident) {
+        if (back === missedCheckoutDaysBack && wi === 1 && resident) {
           await addShift(site, worker, foreman, day, { start, end: null, status: ShiftStatus.NEEDS_REVIEW, resident, flags: ['MISSED_CHECKOUT'] });
           continue;
         }

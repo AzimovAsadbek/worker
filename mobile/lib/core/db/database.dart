@@ -45,7 +45,15 @@ class CacheEntries extends Table {
 
 @DriftDatabase(tables: [PendingEvents, CacheEntries])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'worker_os'));
+  AppDatabase([QueryExecutor? executor])
+      : super(
+          executor ??
+              driftDatabase(
+                name: 'worker_os',
+                // Web target is used for QA previews only; mobile uses native SQLite.
+                web: DriftWebOptions(sqlite3Wasm: Uri.parse('sqlite3.wasm'), driftWorker: Uri.parse('drift_worker.js')),
+              ),
+        );
 
   @override
   int get schemaVersion => 1;
@@ -55,9 +63,12 @@ class AppDatabase extends _$AppDatabase {
   Future<void> enqueue(PendingEventsCompanion e) => into(pendingEvents).insert(e);
 
   /// Events that still need to reach the server, oldest first.
-  Future<List<PendingEvent>> dueEvents(String userId, DateTime now) {
+  Future<List<PendingEvent>> dueEvents(String userId, DateTime now, {bool ignoreBackoff = false}) {
     return (select(pendingEvents)
-          ..where((t) => t.userId.equals(userId) & t.status.equals('PENDING') & (t.nextAttemptAt.isNull() | t.nextAttemptAt.isSmallerOrEqualValue(now)))
+          ..where((t) =>
+              t.userId.equals(userId) &
+              t.status.equals('PENDING') &
+              (ignoreBackoff ? const Constant(true) : (t.nextAttemptAt.isNull() | t.nextAttemptAt.isSmallerOrEqualValue(now))))
           ..orderBy([(t) => OrderingTerm.asc(t.occurredAt)]))
         .get();
   }

@@ -99,17 +99,21 @@ class SyncService {
       ),
     );
     await syncNow();
-    // A sync that was already running did not include this event — run once more.
-    if (!_results.containsKey(id)) await syncNow();
+    if (!_results.containsKey(id)) {
+      // A sync that was already running did not include this event (never attempted) — run once more.
+      final row = await (db.select(db.pendingEvents)..where((t) => t.clientEventId.equals(id))).getSingleOrNull();
+      if (row != null && row.status == 'PENDING' && row.attempts == 0) await syncNow(force: true);
+    }
     return _results.remove(id) ?? const Delivery(DeliveryOutcome.queuedOffline, message: S.offlineSaved);
   }
 
-  Future<void> syncNow() {
-    return _running ??= _run().whenComplete(() => _running = null);
+  /// [force] skips the backoff wait — used when the user taps "send now" or connectivity returns.
+  Future<void> syncNow({bool force = false}) {
+    return _running ??= _run(force).whenComplete(() => _running = null);
   }
 
-  Future<void> _run() async {
-    final due = await db.dueEvents(userId, DateTime.now());
+  Future<void> _run(bool force) async {
+    final due = await db.dueEvents(userId, DateTime.now(), ignoreBackoff: force);
     if (due.isEmpty) return;
     _emit(SyncStatus(syncing: true, lastSyncedAt: _current.lastSyncedAt));
     var changed = false;

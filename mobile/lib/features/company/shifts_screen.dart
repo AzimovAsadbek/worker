@@ -69,27 +69,23 @@ class _ShiftsScreenState extends ConsumerState<ShiftsScreen> {
                   itemBuilder: (c, i) {
                     final s = items[i];
                     final selectable = s.isReviewable && s.endedAt != null;
-                    return Card(
-                      child: ListTile(
-                        leading: selectable
-                            ? Checkbox(value: _selected.contains(s.id), onChanged: (v) => setState(() => v == true ? _selected.add(s.id) : _selected.remove(s.id)))
-                            : const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.timelapse, color: AppColors.primary)),
-                        title: Text(s.worker?.displayName ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('${fmtYmd(s.businessDate)} · ${fmtTime(s.startedAt)}–${s.endedAt == null ? '…' : fmtTime(s.endedAt)} · ${fmtMinutes(s.workedMinutes)}'),
-                          Text(s.siteName ?? '', style: const TextStyle(color: AppColors.muted)),
-                          if (s.flags.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Wrap(spacing: 4, runSpacing: 4, children: [for (final f in s.flags) Pill(flagLabel(f), color: AppColors.warning)]),
-                            ),
-                        ]),
-                        trailing: Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
-                        onTap: () async {
-                          await context.push('/company/shift/${s.id}');
-                          ref.invalidate(reviewQueueProvider);
-                        },
-                      ),
+                    return RecordTile(
+                      leading: selectable
+                          ? Checkbox(value: _selected.contains(s.id), onChanged: (v) => setState(() => v == true ? _selected.add(s.id) : _selected.remove(s.id)))
+                          : const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.timelapse, color: AppColors.primary)),
+                      title: s.worker?.displayName ?? '—',
+                      lines: [
+                        '${fmtYmd(s.businessDate)} · ${fmtTime(s.startedAt)}–${s.endedAt == null ? '…' : fmtTime(s.endedAt)}${s.endedAt == null ? '' : ' · ${fmtMinutes(s.workedMinutes)}'}',
+                        s.siteName ?? '',
+                      ],
+                      badges: [
+                        Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
+                        for (final f in s.flags) Pill(flagLabel(f), color: AppColors.warning, icon: Icons.flag_outlined),
+                      ],
+                      onTap: () async {
+                        await context.push('/company/shift/${s.id}');
+                        ref.invalidate(reviewQueueProvider);
+                      },
                     );
                   },
                 ),

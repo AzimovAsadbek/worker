@@ -95,13 +95,13 @@ class _TodayScreenState extends ConsumerState<TodayScreen> with WidgetsBindingOb
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(ref.read(syncServiceProvider).value?.syncNow());
+      unawaited(ref.read(syncServiceProvider).value?.syncNow(force: true));
       ref.invalidate(todayRemoteProvider);
     }
   }
 
   Future<void> _refresh() async {
-    await ref.read(syncServiceProvider).value?.syncNow();
+    await ref.read(syncServiceProvider).value?.syncNow(force: true);
     ref.invalidate(todayRemoteProvider);
     try {
       await ref.read(todayRemoteProvider.future);
@@ -254,7 +254,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> with WidgetsBindingOb
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             children: [
               if (remoteError != null && remoteError.isNetwork) _OfflineNote(fetchedAt: data.fetchedAt),
-              _OutboxBanner(events: unsynced, onSync: () => ref.read(syncServiceProvider).value?.syncNow()),
+              _OutboxBanner(events: unsynced, onSync: () => ref.read(syncServiceProvider).value?.syncNow(force: true)),
               if (data.assignments.isEmpty && eff.phase != WorkPhase.working)
                 _NoSite(onJobs: () => context.go('/worker/jobs'))
               else if (assignment != null) ...[
@@ -268,13 +268,21 @@ class _TodayScreenState extends ConsumerState<TodayScreen> with WidgetsBindingOb
                 if (eff.staleOpenShift != null) const _Warning(S.staleShift),
                 _StatusCard(eff: eff),
                 const SizedBox(height: 16),
-                _BigButton(
-                  busy: _busy,
-                  busyLabel: _busyLabel,
-                  phase: eff.phase,
-                  onStart: () => _start(assignment),
-                  onEnd: () => _end(eff.siteId ?? assignment.site.id, assignment.site.name),
-                ),
+                if (eff.phase == WorkPhase.finished)
+                  // The day is done: no loud START button; a second shift stays possible but deliberate.
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _start(assignment),
+                    icon: const Icon(Icons.replay),
+                    label: const Text('Yana ish boshlash (yangi smena)'),
+                  )
+                else
+                  _BigButton(
+                    busy: _busy,
+                    busyLabel: _busyLabel,
+                    phase: eff.phase,
+                    onStart: () => _start(assignment),
+                    onEnd: () => _end(eff.siteId ?? assignment.site.id, assignment.site.name),
+                  ),
                 if (assignment.isResident) ...[const SizedBox(height: 12), const _Hint(S.residentHint)],
               ],
               if (data.openTasks > 0) ...[
@@ -291,12 +299,11 @@ class _TodayScreenState extends ConsumerState<TodayScreen> with WidgetsBindingOb
               if (data.todayShifts.isNotEmpty) ...[
                 const SectionTitle('Bugungi smenalar'),
                 for (final s in data.todayShifts)
-                  Card(
-                    child: ListTile(
-                      title: Text('${fmtTime(s.startedAt)} – ${s.endedAt == null ? '…' : fmtTime(s.endedAt)}'),
-                      subtitle: Text(s.siteName ?? ''),
-                      trailing: Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
-                    ),
+                  RecordTile(
+                    title: '${fmtTime(s.startedAt)} – ${s.endedAt == null ? '…' : fmtTime(s.endedAt)}',
+                    lines: [s.siteName ?? ''],
+                    badges: [Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status))],
+                    onTap: () => context.push('/shift/${s.id}'),
                   ),
               ],
             ],
@@ -431,21 +438,41 @@ class _OutboxBanner extends ConsumerWidget {
       if (pending.isNotEmpty)
         Card(
           color: const Color(0xFFFFF4E0),
-          child: ListTile(
-            leading: const Icon(Icons.cloud_upload_outlined, color: AppColors.warning),
-            title: Text(S.pendingCount(pending.length)),
-            subtitle: Text(pending.first.errorMessage ?? S.offlineSaved),
-            trailing: TextButton(onPressed: onSync, child: const Text(S.syncNow)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 8, 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.cloud_upload_outlined, color: AppColors.warning),
+                const SizedBox(width: 10),
+                Expanded(child: Text(S.pendingCount(pending.length), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+              ]),
+              const Padding(padding: EdgeInsets.only(left: 34, top: 2), child: Text(S.offlineSaved)),
+              Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: onSync, icon: const Icon(Icons.sync), label: const Text(S.syncNow))),
+            ]),
           ),
         ),
       for (final r in rejected)
         Card(
           color: const Color(0xFFFDECEC),
-          child: ListTile(
-            leading: const Icon(Icons.error_outline, color: AppColors.danger),
-            title: Text('${r.type == 'WORK_STARTED' ? 'Ish boshlash' : 'Ish yakunlash'} (${fmtTime(r.occurredAt)}) — ${S.syncRejected}'),
-            subtitle: Text(r.errorMessage ?? ''),
-            trailing: TextButton(onPressed: () => ref.read(databaseProvider).acknowledge(r.clientEventId), child: const Text('OK')),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 8, 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.error_outline, color: AppColors.danger),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${r.type == 'WORK_STARTED' ? 'Ish boshlash' : 'Ish yakunlash'} (${fmtTime(r.occurredAt)}) — ${S.syncRejected}',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ]),
+              Padding(padding: const EdgeInsets.only(left: 34, top: 2), child: Text(r.errorMessage ?? '')),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(onPressed: () => ref.read(databaseProvider).acknowledge(r.clientEventId), child: const Text('Tushunarli')),
+              ),
+            ]),
           ),
         ),
       if (pending.isNotEmpty || rejected.isNotEmpty) const SizedBox(height: 12),

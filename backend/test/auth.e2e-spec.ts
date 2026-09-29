@@ -1,4 +1,5 @@
 import { JwtService } from '@nestjs/jwt';
+import { TokenService } from '../src/auth/token.service';
 import { createApp, nextPhone, resetDb, TestCtx } from './helpers';
 
 describe('Auth (phone + OTP, JWT, refresh rotation)', () => {
@@ -177,19 +178,34 @@ describe('Auth (phone + OTP, JWT, refresh rotation)', () => {
     });
   });
 
-  describe('rate limiting (per IP)', () => {
+  describe('rate limiting', () => {
     beforeAll(() => {
       process.env.THROTTLE_DISABLED = 'false';
     });
     afterAll(() => {
       process.env.THROTTLE_DISABLED = 'true';
     });
-    it('OTP request endpoint is limited to 5/min per IP', async () => {
+    it('OTP request endpoint is limited per IP (20/min)', async () => {
       const codes: number[] = [];
-      for (let i = 0; i < 7; i++) codes.push((await requestOtp(nextPhone())).status);
+      for (let i = 0; i < 22; i++) codes.push((await requestOtp(nextPhone())).status);
       expect(codes.filter((c) => c === 429).length).toBeGreaterThan(0);
       const r = await requestOtp(nextPhone()).expect(429);
       expect(r.body.code).toBe('RATE_LIMITED');
+    });
+    it('authenticated requests are limited per user, not per shared (CGNAT) IP', async () => {
+      const tokens = ctx.app.get(TokenService);
+      const a = await ctx.prisma.user.create({ data: { phone: nextPhone() } });
+      const b = await ctx.prisma.user.create({ data: { phone: nextPhone() } });
+      const ta = (await tokens.createSession(a.id, {})).accessToken;
+      const tb = (await tokens.createSession(b.id, {})).accessToken;
+      let limitedA = false;
+      for (let i = 0; i < 125; i++) {
+        const r = await ctx.http().get('/api/v1/me').set('Authorization', `Bearer ${ta}`);
+        if (r.status === 429) limitedA = true;
+      }
+      expect(limitedA).toBe(true);
+      // same IP, different user → not affected
+      await ctx.http().get('/api/v1/me').set('Authorization', `Bearer ${tb}`).expect(200);
     });
   });
 });

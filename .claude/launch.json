@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "backend/dist/main.js"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "web-qa",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "mobile/tool/serve_web.mjs",
+        "8080"
+      ],
+      "port": 8080
+    }
+  ]
+}

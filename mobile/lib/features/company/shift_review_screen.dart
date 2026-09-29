@@ -32,7 +32,7 @@ class ShiftReviewScreen extends ConsumerWidget {
           controller: ctrl,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: S.breakMinutes, helperText: 'Tushlik/tanaffus vaqti ish vaqtidan ayiriladi'),
+          decoration: const InputDecoration(labelText: S.breakMinutes, helperText: 'Tushlik/tanaffus vaqti ish vaqtidan ayiriladi', helperMaxLines: 2),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text(S.cancel)),

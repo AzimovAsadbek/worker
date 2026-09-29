@@ -41,19 +41,17 @@ class CompanyVacanciesScreen extends ConsumerWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 6),
             itemBuilder: (c, i) {
               final v = p.items[i];
-              return Card(
-                child: ListTile(
-                  title: Text(v.title),
-                  subtitle: Text('${fmtMoney(v.rateAmount)} ${paymentPeriodLabel(v.paymentPeriod)} · ${v.acceptedApplications}/${v.workersNeeded} qabul qilindi'),
-                  trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    Pill(vacancyStatusLabel(v.status), color: v.status == 'OPEN' ? AppColors.start : AppColors.muted),
-                    if (v.newApplications > 0) Text('${v.newApplications} yangi ariza', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 12)),
-                  ]),
-                  onTap: () async {
-                    await context.push('/company/vacancy/${v.id}');
-                    ref.invalidate(companyVacanciesProvider);
-                  },
-                ),
+              return RecordTile(
+                title: v.title,
+                lines: ['${fmtMoney(v.rateAmount)} ${paymentPeriodLabel(v.paymentPeriod)}', '${v.acceptedApplications}/${v.workersNeeded} qabul qilindi'],
+                badges: [
+                  Pill(vacancyStatusLabel(v.status), color: v.status == 'OPEN' ? AppColors.start : AppColors.muted),
+                  if (v.newApplications > 0) Pill('${v.newApplications} yangi ariza', color: AppColors.primary, icon: Icons.fiber_new_outlined),
+                ],
+                onTap: () async {
+                  await context.push('/company/vacancy/${v.id}');
+                  ref.invalidate(companyVacanciesProvider);
+                },
               );
             },
           ),
@@ -108,15 +106,18 @@ class VacancyApplicationsScreen extends ConsumerWidget {
             empty: const Padding(padding: EdgeInsets.all(24), child: Text(S.noApplicants, textAlign: TextAlign.center)),
             builder: (p) => Column(children: [
               for (final a in p.items)
-                Card(
-                  child: ListTile(
-                    title: Text(a.worker?.displayName ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text([
-                      if (a.identity != null) '✔ ${a.identity!.verifiedWorkdays} kun · ${fmtHours(a.identity!.verifiedHours)} soat tasdiqlangan',
-                      if (a.workerTrade != null) '${a.workerTrade}${a.workerExperience != null ? ' · ${a.workerExperience} yil (o\'zi)' : ''}',
-                    ].join('\n')),
-                    isThreeLine: a.workerTrade != null,
-                    trailing: Pill(applicationStatusLabel(a.status), color: a.status == 'ACCEPTED' ? AppColors.verified : (a.status == 'REJECTED' ? AppColors.danger : AppColors.primary)),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: RecordTile(
+                    title: a.worker?.displayName ?? '—',
+                    lines: [
+                      if (a.workerTrade != null) '${a.workerTrade}${a.workerExperience != null ? ' · ${a.workerExperience} yil (o\'zi aytgan)' : ''}',
+                    ],
+                    badges: [
+                      Pill(applicationStatusLabel(a.status), color: a.status == 'ACCEPTED' ? AppColors.verified : (a.status == 'REJECTED' ? AppColors.danger : AppColors.primary)),
+                      if (a.identity != null) Pill('${a.identity!.verifiedWorkdays} kun · ${fmtHours(a.identity!.verifiedHours)} soat', color: AppColors.verified, icon: Icons.verified_outlined),
+                      if (a.identity != null) Pill(trustLevelLabel(a.identity!.trustLevel), color: AppColors.muted),
+                    ],
                     onTap: () async {
                       await context.push('/company/application/${a.id}');
                       ref.invalidate(vacancyApplicationsProvider(id));

@@ -15,8 +15,8 @@ export class AuthController {
   @Public()
   @Post('otp/request')
   @HttpCode(200)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Send a 6-digit OTP by SMS (60 s cooldown, 5/hour per phone, 5/min per IP)' })
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Send a 6-digit OTP by SMS (60 s cooldown and 5/hour per phone; 20/min per IP for CGNAT crews)' })
   @ApiTooManyRequestsResponse({ description: 'OTP_COOLDOWN | OTP_LIMIT_EXCEEDED | RATE_LIMITED' })
   requestOtp(@Body() dto: RequestOtpDto, @ReqMeta() meta: RequestMeta) {
     return this.auth.requestOtp(dto, meta);
@@ -25,8 +25,8 @@ export class AuthController {
   @Public()
   @Post('otp/verify')
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Verify OTP → access + refresh tokens (creates the user on first login)' })
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Verify OTP → access + refresh tokens (creates the user on first login). 5 attempts per code.' })
   verifyOtp(@Body() dto: VerifyOtpDto, @ReqMeta() meta: RequestMeta) {
     return this.auth.verifyOtp(dto, meta);
   }

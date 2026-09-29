@@ -105,8 +105,13 @@ class MemberDetailScreen extends ConsumerWidget {
                         for (final s in p.items.take(10))
                           ListTile(
                             title: Text('${fmtYmd(s.businessDate)} · ${fmtTime(s.startedAt)}–${s.endedAt == null ? '…' : fmtTime(s.endedAt)}'),
-                            subtitle: Text(s.siteName ?? ''),
-                            trailing: Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                                Text(s.siteName ?? ''),
+                                Pill(shiftStatusLabel(s.status), color: shiftStatusColor(s.status)),
+                              ]),
+                            ),
                             onTap: () => context.push('/company/shift/${s.id}'),
                           ),
                       ]),

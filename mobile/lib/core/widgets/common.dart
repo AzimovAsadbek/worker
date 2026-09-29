@@ -174,7 +174,10 @@ class StatTile extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: color ?? Colors.black87)),
               const SizedBox(height: 2),
-              Text(label, maxLines: 2, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+              if (label.contains(' '))
+                Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.muted, fontSize: 13))
+              else
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(label, maxLines: 1, style: const TextStyle(color: AppColors.muted, fontSize: 13))),
             ]),
           ),
         ),
@@ -260,4 +263,47 @@ Future<T?> runAction<T>(BuildContext context, Future<T> Function() action, {Stri
     if (context.mounted) showSnack(context, ApiError.from(e).message, error: true);
     return null;
   }
+}
+
+/// List row used across the app: title on top, detail lines, then status badges on their own row,
+/// so long Uzbek labels never squeeze the title into a narrow column.
+class RecordTile extends StatelessWidget {
+  const RecordTile({super.key, required this.title, this.lines = const [], this.badges = const [], this.leading, this.trailing, this.onTap, this.color});
+  final String title;
+  final List<String> lines;
+  final List<Widget> badges;
+  final Widget? leading;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        color: color,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+              child: Row(children: [
+                if (leading != null) ...[leading!, const SizedBox(width: 8)],
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    for (final l in lines.where((l) => l.isNotEmpty))
+                      Padding(padding: const EdgeInsets.only(top: 2), child: Text(l, style: const TextStyle(color: AppColors.muted))),
+                    if (badges.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Wrap(spacing: 6, runSpacing: 6, children: badges),
+                    ],
+                  ]),
+                ),
+                if (trailing != null) ...[const SizedBox(width: 6), trailing!] else if (onTap != null) const Icon(Icons.chevron_right, color: AppColors.muted),
+              ]),
+            ),
+          ),
+        ),
+      );
 }

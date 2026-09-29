@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { AccessModule } from './access/access.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { CompaniesModule } from './companies/companies.module';
 import { AppConfigModule } from './config/config.module';
@@ -89,8 +90,9 @@ function prettyTransport() {
   ],
   controllers: [HealthController],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Order matters: authenticate first so the throttler can key limits by user id.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })

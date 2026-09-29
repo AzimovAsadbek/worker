@@ -37,17 +37,11 @@ class MyApplicationsScreen extends ConsumerWidget {
                 'SHORTLISTED' => AppColors.primary,
                 _ => AppColors.muted,
               };
-              return Card(
-                child: ListTile(
-                  title: Text(a.vacancy?.title ?? ''),
-                  subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(a.vacancy?.company?.name ?? ''),
-                    if (a.statusReason != null) Text(a.statusReason!, style: const TextStyle(color: AppColors.muted)),
-                    Text(fmtDate(a.createdAt), style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-                  ]),
-                  trailing: Pill(applicationStatusLabel(a.status), color: color),
-                  onTap: a.vacancy == null ? null : () => context.push('/vacancy/${a.vacancy!.id}'),
-                ),
+              return RecordTile(
+                title: a.vacancy?.title ?? '',
+                lines: [a.vacancy?.company?.name ?? '', a.statusReason ?? '', fmtDate(a.createdAt)],
+                badges: [Pill(applicationStatusLabel(a.status), color: color)],
+                onTap: a.vacancy == null ? null : () => context.push('/vacancy/${a.vacancy!.id}'),
               );
             },
           ),

@@ -69,7 +69,7 @@ final syncServiceProvider = FutureProvider<SyncService?>((ref) async {
   );
   await service.start();
   ref.listen(connectivityProvider, (prev, next) {
-    if (next.value == true && prev?.value != true) unawaited(service.syncNow());
+    if (next.value == true && prev?.value != true) unawaited(service.syncNow(force: true));
   });
   ref.onDispose(service.dispose);
   return service;

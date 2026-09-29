@@ -56,16 +56,20 @@ class _CompanyTasksScreenState extends ConsumerState<CompanyTasksScreen> {
                 separatorBuilder: (_, _) => const SizedBox(height: 6),
                 itemBuilder: (c, i) {
                   final t = p.items[i];
-                  return Card(
-                    child: ListTile(
-                      title: Text(t.title),
-                      subtitle: Text([t.assignee?.displayName, qty(t.quantity, t.unit), t.siteName, if (t.evidenceCount > 0) '${t.evidenceCount} rasm'].where((x) => x != null && x.isNotEmpty).join(' · ')),
-                      trailing: Pill(taskStatusLabel(t.status), color: taskStatusColor(t.status)),
-                      onTap: () async {
-                        await context.push('/company/task/${t.id}');
-                        ref.invalidate(companyTasksProvider);
-                      },
-                    ),
+                  return RecordTile(
+                    title: t.title,
+                    lines: [
+                      [t.assignee?.displayName, qty(t.quantity, t.unit)].where((x) => x != null && x.isNotEmpty).join(' · '),
+                      t.siteName ?? '',
+                    ],
+                    badges: [
+                      Pill(taskStatusLabel(t.status), color: taskStatusColor(t.status)),
+                      if (t.evidenceCount > 0) Pill('${t.evidenceCount} rasm', icon: Icons.photo_outlined),
+                    ],
+                    onTap: () async {
+                      await context.push('/company/task/${t.id}');
+                      ref.invalidate(companyTasksProvider);
+                    },
                   );
                 },
               ),

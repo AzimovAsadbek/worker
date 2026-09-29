@@ -2,7 +2,13 @@ import { existsSync } from 'fs';
 import { resolve } from 'path';
 
 // Load env files before anything reads process.env (existing variables are never overridden).
-for (const file of [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')]) {
+const envFiles = new Set([
+  resolve(process.cwd(), '.env'),
+  resolve(process.cwd(), '../.env'),
+  resolve(__dirname, '../.env'), // backend/.env when started as `node backend/dist/main.js`
+  resolve(__dirname, '../../.env'), // repository root .env
+]);
+for (const file of envFiles) {
   if (existsSync(file)) process.loadEnvFile(file);
 }
 
