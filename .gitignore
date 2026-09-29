@@ -26,3 +26,6 @@ npm-debug.log*
 .vscode/
 *.iml
 backend/dist-seed/
+
+# local tooling
+.claude/
