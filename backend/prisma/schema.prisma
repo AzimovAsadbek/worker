@@ -4,7 +4,7 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -661,4 +661,13 @@ model AuditLog {
   @@index([companyId, createdAt])
   @@index([actorUserId, createdAt])
   @@index([entityType, entityId])
+}
+
+/// Evidence file bytes when STORAGE_DRIVER=database (serverless deployments without S3).
+model StoredObject {
+  key         String   @id
+  contentType String   @db.VarChar(80)
+  sizeBytes   Int
+  data        Bytes
+  createdAt   DateTime @default(now())
 }

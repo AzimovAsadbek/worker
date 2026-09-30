@@ -141,6 +141,31 @@ docker compose exec api npm run seed:prod
 In production mount real certificates at `infra/nginx/certs/fullchain.pem` and `privkey.pem`,
 set `NODE_ENV=production`, `SMS_PROVIDER=eskiz`, `SWAGGER_ENABLED=false`.
 
+## Deploying the API to Vercel (serverless)
+
+The API also runs as a single Vercel Node function (`backend/api/index.js` → `dist/serverless.js`):
+
+- **Database:** Neon PostgreSQL via the Vercel Marketplace (`DATABASE_URL` pooled for runtime,
+  `DATABASE_URL_UNPOOLED` for migrations, which run during `npm run vercel-build`).
+- **Files:** `STORAGE_DRIVER=database` stores evidence photos in PostgreSQL (Vercel has no S3; request bodies are
+  limited to 4.5 MB → `UPLOAD_MAX_BYTES=4000000`, the app compresses photos to ~1600 px).
+- **Background jobs:** `GET /api/v1/internal/jobs/attendance` with `Authorization: Bearer $CRON_SECRET`.
+  Vercel Hobby allows one cron per day (`vercel.json`, 20:30 Tashkent → missed-checkout reminders); for 10-minute
+  reminders use Vercel Pro or an external scheduler calling the same URL.
+- **Region:** `fra1` (closest to Uzbekistan), same region as the Neon database.
+
+```bash
+cd backend && npx vercel link --project worker-os-api && npx vercel deploy --prod
+```
+
+Required production env on Vercel: `JWT_ACCESS_SECRET`, `OTP_PEPPER`, `CRON_SECRET`, `STORAGE_DRIVER=database`,
+`UPLOAD_MAX_BYTES=4000000`, `TRUST_PROXY=1`, `JOBS_ENABLED=false`, SMS settings (see below) + Neon variables.
+
+> **Demo login mode:** the current deployment uses `SMS_PROVIDER=dev` with `ALLOW_DEV_OTP_IN_PRODUCTION=true`,
+> i.e. the code `111111` works for **any** number. This is for piloting only — anyone who knows the code can sign in
+> as any phone number. Before real use set `SMS_PROVIDER=eskiz`, `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `ESKIZ_FROM`
+> and remove `ALLOW_DEV_OTP_IN_PRODUCTION`.
+
 ## Database
 
 - Schema: `backend/prisma/schema.prisma`; migrations in `backend/prisma/migrations` (never edit applied ones).

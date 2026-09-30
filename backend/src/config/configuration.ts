@@ -28,6 +28,8 @@ export interface AppConfig {
     secretKey: string;
     forcePathStyle: boolean;
   };
+  storageDriver: 's3' | 'database';
+  cronSecret: string | null;
   uploadMaxBytes: number;
   fcmServiceAccountBase64: string | null;
   jobsEnabled: boolean;
@@ -106,6 +108,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       secretKey: env.S3_SECRET_KEY ?? '',
       forcePathStyle: (env.S3_FORCE_PATH_STYLE ?? 'true') === 'true',
     },
+    storageDriver: (env.STORAGE_DRIVER ?? 's3') === 'database' ? 'database' : 's3',
+    cronSecret: env.CRON_SECRET?.trim() || null,
     uploadMaxBytes: int(env, 'UPLOAD_MAX_BYTES', 8 * 1024 * 1024),
     fcmServiceAccountBase64: env.FCM_SERVICE_ACCOUNT_BASE64?.trim() || null,
     jobsEnabled: (env.JOBS_ENABLED ?? 'true') === 'true',

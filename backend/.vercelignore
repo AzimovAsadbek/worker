@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-seed
+coverage
+.env
+.env.*
+!.env.example
+test
+.agents
+skills-lock.json
+.vercel

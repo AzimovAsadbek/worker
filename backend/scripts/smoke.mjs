@@ -96,6 +96,22 @@ async function main() {
   assert(identity.verified.verifiedWorkdays === 1, 'identity counts the verified day');
   ok(`worker identity: ${identity.verified.verifiedWorkdays} day, ${identity.verified.verifiedHours} h, trust ${identity.verified.trustLevel}`);
 
+  const task = await call('POST', `${c}/tasks`, { token: foreman.token, body: { siteId: site.id, assigneeId: worker.id, title: "G'isht terish", quantity: 10, unit: 'm2' } });
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]), Buffer.alloc(512, 7), Buffer.from([0xff, 0xd9])]);
+  const form = new FormData();
+  form.set('file', new Blob([jpeg], { type: 'image/jpeg' }), 'devor.jpg');
+  form.set('comment', 'smoke');
+  const up = await fetch(`${BASE}/me/tasks/${task.id}/evidence`, { method: 'POST', headers: { authorization: `Bearer ${worker.token}` }, body: form });
+  assert(up.status === 201, `evidence upload → ${up.status} ${await up.clone().text()}`);
+  const evidence = await up.json();
+  const dl = await fetch(`${BASE}/evidence/${evidence.id}/content`, { headers: { authorization: `Bearer ${foreman.token}` } });
+  assert(dl.status === 200 && dl.headers.get('content-type') === 'image/jpeg' && (await dl.arrayBuffer()).byteLength === jpeg.length, 'evidence download');
+  const bad = new FormData();
+  bad.set('file', new Blob(['<?php system($_GET["c"]); ?>'.padEnd(64)], { type: 'image/jpeg' }), 'shell.jpg');
+  const rej = await fetch(`${BASE}/me/tasks/${task.id}/evidence`, { method: 'POST', headers: { authorization: `Bearer ${worker.token}` }, body: bad });
+  assert(rej.status === 415, 'malicious upload rejected');
+  ok('task assigned; photo evidence uploaded, streamed to foreman; disguised script rejected (415)');
+
   const vacancy = await call('POST', `${c}/vacancies`, {
     token: admin.token,
     body: { title: 'Betonchi kerak', description: 'Smoke test vacancy description.', category: 'CONCRETE', rateAmount: 200000, paymentPeriod: 'DAILY', siteId: site.id, publish: true },
